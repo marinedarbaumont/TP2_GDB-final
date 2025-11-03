@@ -1,0 +1,112 @@
+version: "3.9"
+
+services:
+  # PostgreSQL 16 
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d   
+      - pg_data:/var/lib/postgresql/data              
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  # Neo4j 5.20 
+  neo4j:
+    image: neo4j:5.20
+    container_name: neo4j
+    environment:
+      NEO4J_AUTH: neo4j/Singapour.13
+      
+      NEO4J_PLUGINS: '["apoc","graph-data-science"]'
+      
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*,gds.*
+      NEO4J_dbms_security_procedures_allowlist: apoc.*,gds.*
+     
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_server_directories_import: "/import"
+    ports:
+      - "7474:7474"   # HTTP browser
+      - "7687:7687"   # Bolt (driver)
+    volumes:
+      - ./neo4j/data:/data     
+      - ./neo4j/import:/import 
+    healthcheck:
+      
+      test: ["CMD-SHELL", "cypher-shell -a bolt://localhost:7687 -u neo4j -p Singapour.13 'RETURN 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  # FastAPI app 
+  app:
+    image: python:3.11-slim
+    container_name: app
+    working_dir: /app
+    volumes:
+      - ./app:/app                       # main.py, requirements.txt, etc.
+      - ./neo4j/import:/neo4j_import               
+    environment:
+      DATABASE_URL: postgresql://app:app@postgres:5432/shop
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: Singapour.13
+    # Install deps then run the API
+    command: >
+      bash -c "pip install --no-cache-dir -r requirements.txt
+      && uvicorn main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+
+
+  # Validation service 
+  checks:
+    image: alpine:3.20
+    container_name: checks
+    working_dir: /work
+    environment:
+      PGPASSWORD: app
+    entrypoint: >
+      sh -lc "
+        apk add --no-cache curl postgresql-client &&
+        echo '==> Checking FastAPI health...' &&
+        curl -s http://app:8000/health | tee /tmp/health.json | grep -q 'ok' &&
+        echo '✓ FastAPI health OK' &&
+
+        echo '==> Postgres: SELECT * FROM orders LIMIT 5;' &&
+        psql -h postgres -U app -d shop -c 'SELECT * FROM orders LIMIT 5;' &&
+        echo '✓ Orders query OK' &&
+
+        echo '==> Postgres: SELECT now();' &&
+        psql -h postgres -U app -d shop -c 'SELECT now();' &&
+        echo '✓ now() query OK' &&
+
+        echo '==> Trigger ETL via FastAPI' &&
+        curl -sS -X POST http://app:8000/etl | tee /tmp/etl_out.json | grep -q 'ok' &&
+        echo '✓ ETL output OK (ETL done.)' &&
+
+        echo ' All tests passed.'
+      "
+    depends_on:
+      - app
+      - postgres
+      - neo4j
+
+
+volumes:
+  pg_data:
