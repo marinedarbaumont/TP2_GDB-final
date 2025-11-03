@@ -1,4 +1,3 @@
-cat > .gitignore <<'EOF'
 # --- Databases / runtime data ---
 neo4j/data/
 neo4j/logs/
