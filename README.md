@@ -34,7 +34,7 @@ docker compose up -d
 - Postgres: localhost:5432 (user: app / pass: app / db: appdb)
 
 3) to check the health of the services:
-   # after the stack is up (app, postgres, neo4j)
+after the stack is up (app, postgres, neo4j)
 ```bash 
 docker compose run --rm checks
 ```
