@@ -30,7 +30,7 @@ docker compose up -d
 
 2) Open services
 - FastAPI: http://localhost:8000 (docs at /docs)
-- Neo4j Browser: http://localhost:7474  (user: neo4j / pass: test)
+- Neo4j Browser: http://localhost:7474  (user: neo4j / pass: Singapour.13)
 - Postgres: localhost:5432 (user: app / pass: app / db: appdb)
 
 3) Try it
