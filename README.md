@@ -25,7 +25,7 @@ Project scaffold that matches the structure you requested.
 
 1) Build & run
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
 2) Open services
