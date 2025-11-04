@@ -57,6 +57,10 @@ docker compose run --rm checks
 **6) Which recommendation strategy you can implement?
 What’s improvements you’d make for transforming this mini project into production ready code ?**
 
+Recommendation strategy -> I would start with a simple “customers who bought this also bought that” approach using graph relationships. For example, if two products often appear in the same order, or if customers view or add similar products to their carts, the system can recommend related items. We could also use category similarity (recommend items from the same category) or popularity-based ranking (show most viewed or purchased items). These are the most simple approaches but also the strategies that I am most capable of implementing.
+
+Production ready code -> To make it ready for production, I would automate the ETL so data updates automatically and add checks to make sure the imports don’t fail.
+
 
 
 
